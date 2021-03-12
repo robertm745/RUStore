@@ -8,6 +8,11 @@ import java.io.*;
 public class RUStoreClient {
 
 	/* any necessary class members here */
+	String host;
+	int port;
+	Socket conn;
+	BufferedReader fromServer;
+	DataOutputStream toServer;
 
 	/**
 	 * RUStoreClient Constructor, initializes default values for class members
@@ -20,23 +25,9 @@ public class RUStoreClient {
 	public RUStoreClient(String host, int port) {
 
 		// Implement here
-		if (host == null || host.length() == 0 || port < 0)
-			return;
-		try {
-		Socket conn = new Socket(host, port);
-		BufferedReader fromServer = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-		DataOutputStream toServer = new DataOutputStream(conn.getOutputStream());
-		toServer.writeBytes(new BufferedReader(new InputStreamReader(System.in)).readLine());
-		String line = fromServer.readLine();
-		System.out.println("Got back: " + line + '\n');
-		fromServer.close();
-		toServer.close();
-		conn.close();
-		}
-		catch (IOException e) {
-			e.printStackTrace();
-		}
 
+		this.host = host;
+		this.port = port;
 
 
 	}
@@ -46,10 +37,15 @@ public class RUStoreClient {
 	 * running on a given host and port.
 	 *
 	 * @return		n/a, however throw an exception if any issues occur
+	 * @throws IOException 
+	 * @throws UnknownHostException 
 	 */
-	public void connect() {
+	public void connect() throws UnknownHostException, IOException {
 
 		// Implement here
+		this.conn = new Socket(host, port);
+		this.fromServer = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+		this.toServer = new DataOutputStream(conn.getOutputStream());
 
 	}
 
@@ -64,10 +60,14 @@ public class RUStoreClient {
 	 * @return		0 upon success
 	 *        		1 if key already exists
 	 *        		Throw an exception otherwise
+	 * @throws IOException 
 	 */
-	public int put(String key, byte[] data) {
+	public int put(String key, byte[] data) throws IOException {
 
 		// Implement here
+		System.out.println("Internal client writing: " + key);
+		toServer.writeBytes(key + '\n');
+		System.out.println("Internal client wrote: " + key);
 		return -1;
 
 	}
@@ -84,26 +84,34 @@ public class RUStoreClient {
 	 *        		1 if key already exists
 	 *        		Throw an exception otherwise
 	 */
+	
 	public int put(String key, String file_path) {
 
 		// Implement here
 		return -1;
 
 	}
+	
 
 	/**
-	 * Downloads arbitrary data object associated with a given key
-	 * from the object store server.
+	 * Downloads arbitrary data object associated with a given key from the object
+	 * store server.
 	 * 
-	 * @param key	key associated with the object
+	 * @param key key associated with the object
 	 * 
-	 * @return		object data as a byte array, null if key doesn't exist.
-	 *        		Throw an exception if any other issues occur.
+	 * @return object data as a byte array, null if key doesn't exist. Throw an
+	 *         exception if any other issues occur.
+	 * @throws IOException
 	 */
-	public byte[] get(String key) {
+	public byte[] get(String key) throws IOException {
 
 		// Implement here
-		return null;
+		System.out.println("Attempting to read from server (internal client get):");
+		String line = fromServer.readLine();
+		System.out.println("Got (internal @ client get): " + line);
+		return line.getBytes();
+
+		//return null;
 
 	}
 

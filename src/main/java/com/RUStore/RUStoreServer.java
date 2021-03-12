@@ -29,21 +29,25 @@ public class RUStoreServer {
 
 		// Implement here //
 		ServerSocket svc = new ServerSocket(port, 5);
-		System.out.println("Server initialized...");
+		System.out.println("Server initialized on port " + port);
 		for (;;) {
-			Socket conn = svc.accept();
-			System.out.println("Got a new connection");
+			Socket conn = svc.accept();	 // wait for a connection
+	
 			BufferedReader fromClient = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 			DataOutputStream toClient = new DataOutputStream(conn.getOutputStream());
-			// DataOutputStream toClient = new DataOutputStream(conn.getOutputStream());
+
 			String line;
-			line = fromClient.readLine();
-			toClient.writeBytes(line.toUpperCase() + '\n');
-			
-			fromClient.close();
-			toClient.close();
-			conn.close();
+			while  ((line = fromClient.readLine()) != null) {	// read the data from the client
+				System.out.println("got line \"" + line + "\"");	// show what we got
+
+				String result = line.length() + ": " + line.toUpperCase() + '\n';	// do the work
+
+				toClient.writeBytes(result);	// send the result
+			}
+			System.out.println("closing the connection");
+			conn.close();		// close connection
 		}
+
 		// svc.close();
 	}
 

@@ -1,5 +1,8 @@
 package com.RUStore;
 
+import java.io.*;
+import java.net.*;
+
 /**
  * This TestSandbox is meant for you to implement and extend to 
  * test your object store as you slowly implement both the client and server.
@@ -14,12 +17,22 @@ public class TestSandbox{
 
 		// Create a new RUStoreClient
 		RUStoreClient client = new RUStoreClient("localhost", 12345);
+		String line;
+		byte[] arr = new byte[5];
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
 		// Open a connection to a remote service
 		System.out.println("Connecting to object server...");
 		try {
 			client.connect();
 			System.out.println("Established connection to server.");
+			while ((line = br.readLine()) != null) {
+				System.out.println("Sending " + line);
+				client.put(line, arr);
+				line = new String(client.get(null));
+				System.out.println("Got back" + line + '\n');
+			}
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 			System.out.println("Failed to connect to server.");
