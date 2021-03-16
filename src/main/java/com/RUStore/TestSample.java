@@ -103,7 +103,7 @@ public class TestSample{
 
 		/* Test with a file */
 
-		fileKey = "scene-builder";
+		fileKey = "SceneBuilder";
 		inputPath = "../inputfiles/SceneBuilder-15.0.0.msi";
 		outputPath = "../outputfiles/SceneBuilder-15.0.0_.msi";
 
@@ -137,8 +137,8 @@ public class TestSample{
 					}else {
 						System.out.println("File contents are not equal! Got garbage data. (BAD FILE DOWNLOAD)");
 					}
-					// System.out.println("Deleting downloaded file.");
-					// Files.delete(fileOut.toPath());
+					System.out.println("Deleting downloaded file.");
+					Files.delete(fileOut.toPath());
 				}else {
 					System.out.println("No file downloaded. (BAD FILE DOWNLOAD)");
 				}

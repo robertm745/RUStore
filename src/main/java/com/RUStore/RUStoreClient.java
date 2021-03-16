@@ -77,9 +77,7 @@ public class RUStoreClient {
 		toServer.writeInt(bkey.length);
 		toServer.write(bkey);
 		int c = fromServer.readInt();
-		// System.out.println("Got confirmation int " + c);	
 		if (c == DUPL) {
-			// System.out.println("Error: server already contains key");
 			return 1;
 		}
 		toServer.writeInt(data.length);
@@ -138,18 +136,14 @@ public class RUStoreClient {
 		toServer.writeInt(bkey.length);
 		toServer.write(bkey);
 		int c = fromServer.readInt();
-		// System.out.println("Client lib got cnfm int " + c);
-		if (c == UNIQ) {
-			int size = fromServer.readInt();
-			byte[] data = fromServer.readNBytes(size);
-			// System.out.println("Client lib got " + data.length + " bytes");
-			if (data.length == size) 
-				return data;
-			// System.out.println("Error: wrong number of bytes recieved from server in client lib");
+		if (c == DUPL) 
 			return null;
-		}
-		// System.out.println("Error: key doesn't exist in server");
-		return null;
+		int size = fromServer.readInt();
+		byte[] data = fromServer.readNBytes(size);
+		if (data.length == size) 
+			return data;
+		else 
+			return null;
 	}
 
 	/**
@@ -177,13 +171,9 @@ public class RUStoreClient {
 		}
 		int size = fromServer.readInt();
 		byte[] data = fromServer.readNBytes(size);
-		
 		FileOutputStream fos = new FileOutputStream(file_path);
-		// System.out.println("Client lib writing to file " + file.getAbsolutePath());
 		fos.write(data);
 		fos.close();
-		// File file = new File(file_path);
-		// System.out.println("File " + file.getAbsolutePath() + " exists: " + file.exists());
 		return 0;
 
 	}
@@ -208,9 +198,7 @@ public class RUStoreClient {
 		toServer.writeInt(strbytes.length);
 		toServer.write(strbytes);
 		int res = fromServer.readInt();
-		// System.out.println("Server sent result to client lib: " + res);
-		return res;
-
+		return (res == DUPL) ? 1 : 0;
 	}
 
 	/**
@@ -225,7 +213,6 @@ public class RUStoreClient {
 		// Implement here
 		toServer.writeInt(LIST);
 		int listlen = fromServer.readInt();
-		// System.out.println("Got list length: " + listlen);
 		if (listlen == 0) 
 			return null;
 		String[] keylist = new String[listlen];
