@@ -91,23 +91,24 @@ public class TestSample{
 			System.out.println("Failed getting object with key \"" + stringKey + "\" Exception occured.");
 		}
 
-
+		/*
 		// Delay 5 seconds
-		try {
+		try {s
 			TimeUnit.SECONDS.sleep(2);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-
+		*/
 
 
 		/* Test with a file */
 
-		fileKey = "chapter1.txt";
-		inputPath = "./inputfiles/lofi.mp3";
-		outputPath = "./outputfiles/lofi_.mp3";
+		fileKey = "scene-builder";
+		inputPath = "../inputfiles/SceneBuilder-15.0.0.msi";
+		outputPath = "../outputfiles/SceneBuilder-15.0.0_.msi";
 
 		// PUT File
+		
 		try {
 			System.out.println("Putting file \"" + inputPath + "\" with key \"" + fileKey + "\"");
 			ret = client.put(fileKey, inputPath);
@@ -136,8 +137,8 @@ public class TestSample{
 					}else {
 						System.out.println("File contents are not equal! Got garbage data. (BAD FILE DOWNLOAD)");
 					}
-					System.out.println("Deleting downloaded file.");
-					Files.delete(fileOut.toPath());
+					// System.out.println("Deleting downloaded file.");
+					// Files.delete(fileOut.toPath());
 				}else {
 					System.out.println("No file downloaded. (BAD FILE DOWNLOAD)");
 				}

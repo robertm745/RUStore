@@ -1,6 +1,9 @@
 package com.RUStore;
 
 import java.net.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
 import java.io.*;
 
 /* any necessary Java packages here */
@@ -11,9 +14,15 @@ public class RUStoreClient {
 	String host;
 	int port;
 	Socket conn;
-	BufferedReader fromServer;
+	DataInputStream fromServer;
 	DataOutputStream toServer;
-
+	private static final int PUT = 0;
+	private static final int GET = 1;
+	private static final int LIST = 2;
+	private static final int REMV = 3;
+	private static final int DISC = 4;
+	private static final int UNIQ = 5;
+	private static final int DUPL = 6;
 	/**
 	 * RUStoreClient Constructor, initializes default values for class members
 	 *
@@ -25,12 +34,11 @@ public class RUStoreClient {
 	public RUStoreClient(String host, int port) {
 
 		// Implement here
-
 		this.host = host;
 		this.port = port;
 
-
 	}
+	
 
 	/**
 	 * Opens a socket and establish a connection to the object store server
@@ -44,9 +52,8 @@ public class RUStoreClient {
 
 		// Implement here
 		this.conn = new Socket(host, port);
-		this.fromServer = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+		this.fromServer = new DataInputStream(conn.getInputStream());
 		this.toServer = new DataOutputStream(conn.getOutputStream());
-
 	}
 
 	/**
@@ -65,11 +72,19 @@ public class RUStoreClient {
 	public int put(String key, byte[] data) throws IOException {
 
 		// Implement here
-		System.out.println("Internal client writing: " + key);
-		toServer.writeBytes(key + '\n');
-		System.out.println("Internal client wrote: " + key);
-		return -1;
-
+		toServer.writeInt(PUT);
+		byte[] bkey = new String(key).getBytes();
+		toServer.writeInt(bkey.length);
+		toServer.write(bkey);
+		int c = fromServer.readInt();
+		// System.out.println("Got confirmation int " + c);	
+		if (c == DUPL) {
+			// System.out.println("Error: server already contains key");
+			return 1;
+		}
+		toServer.writeInt(data.length);
+		toServer.write(data);
+		return 0;
 	}
 
 	/**
@@ -83,13 +98,25 @@ public class RUStoreClient {
 	 * @return		0 upon success
 	 *        		1 if key already exists
 	 *        		Throw an exception otherwise
+	 * @throws IOException 
 	 */
 	
-	public int put(String key, String file_path) {
+	public int put(String key, String file_path) throws IOException {
 
 		// Implement here
-		return -1;
-
+		toServer.writeInt(PUT);
+		byte[] bkey = new String(key).getBytes();
+		toServer.writeInt(bkey.length);
+		toServer.write(bkey);
+		int c = fromServer.readInt();
+		if (c == DUPL) {
+			return 1;
+		}
+		File file = new File(file_path);
+		byte[] data = Files.readAllBytes(Paths.get(file.toURI()));
+		toServer.writeInt(data.length);
+		toServer.write(data);
+		return 0;
 	}
 	
 
@@ -106,13 +133,23 @@ public class RUStoreClient {
 	public byte[] get(String key) throws IOException {
 
 		// Implement here
-		System.out.println("Attempting to read from server (internal client get):");
-		String line = fromServer.readLine();
-		System.out.println("Got (internal @ client get): " + line);
-		return line.getBytes();
-
-		//return null;
-
+		toServer.writeInt(GET);
+		byte[] bkey = key.getBytes();
+		toServer.writeInt(bkey.length);
+		toServer.write(bkey);
+		int c = fromServer.readInt();
+		// System.out.println("Client lib got cnfm int " + c);
+		if (c == UNIQ) {
+			int size = fromServer.readInt();
+			byte[] data = fromServer.readNBytes(size);
+			// System.out.println("Client lib got " + data.length + " bytes");
+			if (data.length == size) 
+				return data;
+			// System.out.println("Error: wrong number of bytes recieved from server in client lib");
+			return null;
+		}
+		// System.out.println("Error: key doesn't exist in server");
+		return null;
 	}
 
 	/**
@@ -125,11 +162,29 @@ public class RUStoreClient {
 	 * @return		0 upon success
 	 *        		1 if key doesn't exist
 	 *        		Throw an exception otherwise
+	 * @throws IOException 
 	 */
-	public int get(String key, String file_path) {
+	public int get(String key, String file_path) throws IOException {
 
 		// Implement here
-		return -1;
+		toServer.writeInt(GET);
+		byte[] bkey = key.getBytes();
+		toServer.writeInt(bkey.length);
+		toServer.write(bkey);
+		int c = fromServer.readInt();
+		if (c == DUPL) {
+			return 1;
+		}
+		int size = fromServer.readInt();
+		byte[] data = fromServer.readNBytes(size);
+		
+		FileOutputStream fos = new FileOutputStream(file_path);
+		// System.out.println("Client lib writing to file " + file.getAbsolutePath());
+		fos.write(data);
+		fos.close();
+		// File file = new File(file_path);
+		// System.out.println("File " + file.getAbsolutePath() + " exists: " + file.exists());
+		return 0;
 
 	}
 
@@ -143,11 +198,18 @@ public class RUStoreClient {
 	 * @return		0 upon success
 	 *        		1 if key doesn't exist
 	 *        		Throw an exception otherwise
+	 * @throws IOException 
 	 */
-	public int remove(String key) {
+	public int remove(String key) throws IOException {
 
 		// Implement here
-		return -1;
+		byte[] strbytes = key.getBytes();
+		toServer.writeInt(REMV);
+		toServer.writeInt(strbytes.length);
+		toServer.write(strbytes);
+		int res = fromServer.readInt();
+		// System.out.println("Server sent result to client lib: " + res);
+		return res;
 
 	}
 
@@ -156,11 +218,25 @@ public class RUStoreClient {
 	 * 
 	 * @return		List of keys as string array, null if there are no keys.
 	 *        		Throw an exception if any other issues occur.
+	 * @throws IOException 
 	 */
-	public String[] list() {
+	public String[] list() throws IOException {
 
 		// Implement here
-		return null;
+		toServer.writeInt(LIST);
+		int listlen = fromServer.readInt();
+		// System.out.println("Got list length: " + listlen);
+		if (listlen == 0) 
+			return null;
+		String[] keylist = new String[listlen];
+		int bytlen;
+		byte[] strbytes;
+		for (int i = 0; i < listlen; i++) {
+			bytlen = fromServer.readInt();
+			strbytes = fromServer.readNBytes(bytlen);
+			keylist[i] = new String(strbytes);
+		}
+		return keylist;
 
 	}
 
@@ -169,11 +245,75 @@ public class RUStoreClient {
 	 * the client socket.
 	 * 
 	 * @return		n/a, however throw an exception if any issues occur
+	 * @throws IOException 
 	 */
-	public void disconnect() {
+	public void disconnect() throws IOException {
 
 		// Implement here
-
+		this.toServer.writeInt(DISC);
+		this.fromServer.close();
+		this.toServer.close();
+		conn.close();
 	}
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
