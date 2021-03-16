@@ -24,14 +24,42 @@ public class RUStoreServer {
 	/* any necessary helper methods here */
 	private static String readKey() throws IOException {
 		int keylen = fromClient.readInt();
-		System.out.println("Server got keylen:" + keylen);
-
 		byte[] bkey = fromClient.readNBytes(keylen);
-		String keystr = new String(bkey);
-		System.out.println("Server got key: " + keystr);
-		return keystr;
+		return  new String(bkey);
+	}
+	
+	private static void goPut(String key) throws IOException {
+		System.out.println("Putting object with key " + key);
+		toClient.writeInt(UNIQ);
+		int datalen = fromClient.readInt();
+		byte[] data = fromClient.readNBytes(datalen);
+		objstore.put(key, new ServerStorage(data));
+	}
+	
+	private static void goGet(String key) throws IOException {
+		System.out.println("Retrieving object with key " + key);
+		toClient.writeInt(UNIQ);
+		byte[] data = objstore.get(key).getBytes();
+		toClient.writeInt(data.length);
+		toClient.write(data);
+	}
+	
+	private static void goRemove(String key) throws IOException {
+		System.out.println("Removing object with key " + key);
+		objstore.remove(key);
+		toClient.writeInt(UNIQ);
 	}
 
+	private static void goList() throws IOException {
+		System.out.println("Sending list of object keys...");
+		toClient.writeInt(objstore.keySet().size());
+		byte[] strbytes;
+		for (String s : objstore.keySet()) {
+			strbytes = s.getBytes();
+			toClient.writeInt(strbytes.length);
+			toClient.write(strbytes);
+		}
+	}
 	/**
 	 * RUObjectServer Main(). Note: Accepts one argument -> port number
 	 * 
@@ -60,80 +88,25 @@ public class RUStoreServer {
 			
 			int optype;
 			while ((optype = fromClient.readInt()) != DISC) {
-				System.out.println("Server got optype:" + optype);
 				if (optype == PUT || optype == GET || optype == REMV) {
 					String key = readKey();
-					
-					if (optype == PUT) {
-						if (objstore.containsKey(key)) {
-							System.out.println("Duplicate key");
+					if (!objstore.containsKey(key)) {
+						if (optype == PUT) 
+							goPut(key);
+						else 
 							toClient.writeInt(DUPL);
-							continue;
-						}
-						toClient.writeInt(UNIQ);
-						System.out.println("Sent confirm unique key");
-						int datalen = fromClient.readInt();
-						System.out.println("Server got datalen " + datalen);
-						
-						byte[] data = fromClient.readNBytes(datalen);
-						objstore.put(key, new ServerStorage(data));
-						System.out.println("Server read " + data.length + " bytes");
-						// System.out.println("Server got data: " + new String(data));
-						/*
-						Byte[] boxdata = new Byte[datalen];
-						int i = 0;
-						for (byte b : data) {
-							boxdata[i++] = b;
-						}
-						objstore.put(key, boxdata);
-						*/
-						
-					} else if (optype == GET) {
-						if (objstore.containsKey(key)) {
-							System.out.println("Sending client lib confirm key exists");
-							toClient.writeInt(UNIQ);
-							byte[] data = objstore.get(key).getBytes();
-							toClient.writeInt(data.length);
-							toClient.write(data);
-							/*
-							// byte[] data = new byte[boxdata.length];
-							// int i = 0;
-							for (Byte b : boxdata) {
-								// data[i++] = b.byteValue();
-								toClient.writeByte(b.byteValue());
-							}
-							System.out.println("Server wrote " + boxdata.length + " bytes");
-							*/
-						}  else {
-							toClient.writeInt(DUPL);
-							System.out.println("Key doesn't exist in server");
-							continue;
-						}
 					} else {
-						// optype == REM
-						if (objstore.containsKey(key)) {
-							System.out.println("Removing " + key);
-							objstore.remove(key);
-							toClient.writeInt(0);
-						} else {
-							System.out.println("Error: " + key + " not in objstore");
-							toClient.writeInt(1);
-						}
+						if (optype == GET) 
+							goGet(key);
+						else if (optype == REMV)
+							goRemove(key);
+						else
+							toClient.writeInt(DUPL);
 					}
-				} else if (optype == LIST) { 
-					String[] keys = objstore.keySet().toArray(new String[objstore.keySet().size()]);
-					toClient.writeInt(keys.length);
-					// Arrays.stream(keys).map(i -> i.getBytes()).forEach(j -> { toClient.writeInt(j.length); toClient.write(j);});
-					byte[] strbytes;
-					for (String s : keys) {
-						strbytes = s.getBytes();
-						toClient.writeInt(strbytes.length);
-						toClient.write(strbytes);
-					}
-					System.out.println("Server sent " + keys.length + " keys");
-				} else {
-					System.out.println("Invalid optype");
-				}
+				} else if (optype == LIST) {
+					goList();
+				} else 
+					System.out.println("Received invalid optype: " + optype);
 			}
 
 			System.out.println("closing the connection");

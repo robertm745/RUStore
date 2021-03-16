@@ -108,7 +108,22 @@ public class TestSample{
 		outputPath = "../outputfiles/SceneBuilder-15.0.0_.msi";
 
 		// PUT File
+		System.out.println("Trying initial PUT...");
+		try {
+			System.out.println("Putting file \"" + inputPath + "\" with key \"" + fileKey + "\"");
+			ret = client.put(fileKey, inputPath);
+			if(ret == 0) {
+				System.out.println("Successfully put file!");
+			}else {
+				System.out.println("Failed to put file \"" + inputPath + "\" with key \"" + fileKey + "\". Key already exists. (INCORRECT RETURN)");
+			}
+		} catch (Exception e1) {
+			e1.printStackTrace();
+			System.out.println("Failed to put file \"" + inputPath + "\" with key \"" + fileKey + "\". Exception occured.");
+		} 
 		
+		// try to PUT duplicate file
+		System.out.println("Attempt to put duplicate...");
 		try {
 			System.out.println("Putting file \"" + inputPath + "\" with key \"" + fileKey + "\"");
 			ret = client.put(fileKey, inputPath);
@@ -122,7 +137,44 @@ public class TestSample{
 			System.out.println("Failed to put file \"" + inputPath + "\" with key \"" + fileKey + "\". Exception occured.");
 		} 
 
+		System.out.println("First attempt to GET...");
 		// GET File
+		try {
+			System.out.println("Getting object with key \"" + fileKey + "\"");
+			ret = client.get(fileKey, outputPath);
+			if(ret == 0) {
+				fileIn = new File(inputPath);
+				fileOut = new File(outputPath);
+				if(fileOut.exists()) {
+					fileInBytes = Files.readAllBytes(fileIn.toPath());
+					fileOutBytes = Files.readAllBytes(fileOut.toPath());
+					if(Arrays.equals(fileInBytes, fileOutBytes)) {
+						System.out.println("File contents are equal! Successfully Retrieved File");
+					}else {
+						System.out.println("File contents are not equal! Got garbage data. (BAD FILE DOWNLOAD)");
+					}
+					System.out.println("Deleting downloaded file.");
+					Files.delete(fileOut.toPath());
+					String[] list = client.list();
+					System.out.println("Listing keys before remove...");
+					Arrays.stream(list).forEach(System.out::println);
+					client.remove("SceneBuilder");
+					list = client.list();
+					System.out.println("Listing keys after remove...");
+					Arrays.stream(list).forEach(System.out::println);
+				}else {
+					System.out.println("No file downloaded. (BAD FILE DOWNLOAD)");
+				}
+			}else {
+				System.out.println("Failed getting object with key \"" + stringKey + "\". Key doesn't exist. (INCORRECT RETURN)");
+			}
+		} catch (IOException e1) {
+			e1.printStackTrace();
+			System.out.println("Failed getting object with key \"" + stringKey + "\" Exception occured.");
+		}
+		
+		// retry GET File after deletion
+		System.out.println("File is deleted, retrying GET...");
 		try {
 			System.out.println("Getting object with key \"" + fileKey + "\"");
 			ret = client.get(fileKey, outputPath);

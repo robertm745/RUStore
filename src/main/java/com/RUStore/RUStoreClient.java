@@ -78,6 +78,7 @@ public class RUStoreClient {
 		toServer.write(bkey);
 		int c = fromServer.readInt();
 		if (c == DUPL) {
+			System.out.println("Error: duplicate key");
 			return 1;
 		}
 		toServer.writeInt(data.length);
@@ -108,6 +109,7 @@ public class RUStoreClient {
 		toServer.write(bkey);
 		int c = fromServer.readInt();
 		if (c == DUPL) {
+			System.out.println("Error: duplicate key");
 			return 1;
 		}
 		File file = new File(file_path);
@@ -136,8 +138,10 @@ public class RUStoreClient {
 		toServer.writeInt(bkey.length);
 		toServer.write(bkey);
 		int c = fromServer.readInt();
-		if (c == DUPL) 
+		if (c == DUPL) {
+			System.out.println("Error: no object found with key " + key);
 			return null;
+		}
 		int size = fromServer.readInt();
 		byte[] data = fromServer.readNBytes(size);
 		if (data.length == size) 
@@ -167,6 +171,7 @@ public class RUStoreClient {
 		toServer.write(bkey);
 		int c = fromServer.readInt();
 		if (c == DUPL) {
+			System.out.println("Error: no object found with key " + key);
 			return 1;
 		}
 		int size = fromServer.readInt();
@@ -198,7 +203,7 @@ public class RUStoreClient {
 		toServer.writeInt(strbytes.length);
 		toServer.write(strbytes);
 		int res = fromServer.readInt();
-		return (res == DUPL) ? 1 : 0;
+		return (res == UNIQ) ? 0 : 1;
 	}
 
 	/**
@@ -241,6 +246,7 @@ public class RUStoreClient {
 		this.fromServer.close();
 		this.toServer.close();
 		conn.close();
+		System.out.println("Disconnected from server");
 	}
 
 }
