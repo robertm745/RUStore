@@ -25,7 +25,7 @@ public class RUStoreServer {
 	private static String readKey() throws IOException {
 		int keylen = fromClient.readInt();
 		byte[] bkey = fromClient.readNBytes(keylen);
-		return  new String(bkey);
+		return (bkey.length == keylen) ? new String(bkey) : null;
 	}
 	
 	private static void goPut(String key) throws IOException {
@@ -82,37 +82,52 @@ public class RUStoreServer {
 		System.out.println("Server initialized on port " + port);
 		for (;;) {
 			Socket conn = svc.accept();	 // wait for a connection
-	
+			System.out.println("Connected with new client.");
+			
 			fromClient = new DataInputStream(conn.getInputStream());
 			toClient = new DataOutputStream(conn.getOutputStream());
 			
 			int optype;
-			while ((optype = fromClient.readInt()) != DISC) {
-				if (optype == PUT || optype == GET || optype == REMV) {
-					String key = readKey();
-					if (!objstore.containsKey(key)) {
-						if (optype == PUT) 
-							goPut(key);
-						else 
+			try {
+				while ((optype = fromClient.readInt()) != DISC) {
+					if (optype == PUT || optype == GET || optype == REMV) {
+						String key = readKey();
+						if (key == null) {
+							System.out.println("Error: server received corrupted key");
 							toClient.writeInt(DUPL);
+							break;
+						}
+						if (!objstore.containsKey(key)) {
+							if (optype == PUT) 
+								goPut(key);
+							else 
+								toClient.writeInt(DUPL);
+						} else {
+							if (optype == GET) 
+								goGet(key);
+							else if (optype == REMV)
+								goRemove(key);
+							else
+								toClient.writeInt(DUPL);
+						}
+					} else if (optype == LIST) {
+						goList();
 					} else {
-						if (optype == GET) 
-							goGet(key);
-						else if (optype == REMV)
-							goRemove(key);
-						else
-							toClient.writeInt(DUPL);
+						System.out.println("Received invalid optype: " + optype);
+						break;
 					}
-				} else if (optype == LIST) {
-					goList();
-				} else 
-					System.out.println("Received invalid optype: " + optype);
+				}
+				
+				System.out.println("closing the connection");
+				fromClient.close();
+				toClient.close();
+				conn.close();		// close connection
+				
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.out.println("Server and client connection compromised.");
 			}
 
-			System.out.println("closing the connection");
-			fromClient.close();
-			toClient.close();
-			conn.close();		// close connection
 		}
 		// svc.close();
 	}
